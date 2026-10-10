@@ -147,21 +147,6 @@ Los nodos se comunican vía API REST autenticada con API Keys emitidas por el Ba
 
 ---
 
-## Enlaces de producción
-
-| Nodo | URL | Repositorio | Plataforma |
-|------|-----|-------------|------------|
-| Banco Central | https://banco-central.onrender.com | 4bram/banco-central | Render |
-| Panel Admin | https://banco-central.onrender.com/admin/login | - | Render |
-| Swagger UI | https://banco-central.onrender.com/api/documentation | - | Render |
-| OpenAPI (YAML) | https://banco-central.onrender.com/openapi.yaml | - | Render |
-| Sucursal | https://URL-VERCEL-SUCURSAL.vercel.app | usuario/sucursal | Vercel |
-| ATM | https://URL-VERCEL-ATM.vercel.app | usuario/atm | Vercel |
-
-> **Nota:** reemplazar `URL-VERCEL-SUCURSAL` y `URL-VERCEL-ATM` con las URLs reales cuando estén disponibles.
-
----
-
 ## Endpoints del Banco Central
 
 URL base: `https://banco-central.onrender.com`
@@ -416,8 +401,8 @@ banco-central/
 
 ## Equipo
 
-| Rol | Nombre | GitHub |
-|-----|--------|--------|
+| Rol | Nombre | 
+|-----|--------|
 | Banco Central | Abraham y Gael |
 | Nodo Sucursal | Hugo | 
 | Nodo ATM | Jesús | 
