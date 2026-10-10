@@ -31,7 +31,7 @@ Los nodos se comunican vía API REST autenticada con API Keys emitidas por el Ba
 | Health check | https://banco-central.onrender.com/api/health |
 | Panel Admin | https://banco-central.onrender.com/admin/login |
 
-> **Nota:** el plan Free de Render duerme el servicio tras un rato sin tráfico; la primera petición puede tardar unos segundos en responder.
+> **Nota:** el plan Free de Render duerme el servicio tras un rato sin tráfico; la primera petición puede tardar unos segundos en responder, ademas API la url base necesita de los endpoints que se describen.
 
 ---
 
