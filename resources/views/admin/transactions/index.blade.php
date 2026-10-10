@@ -24,6 +24,10 @@
         </div>
         <button type="submit" class="btn">Filtrar</button>
     </form>
+    <div style="display: flex; gap: 10px; margin-left: 20px;">
+        <a href="{{ route('admin.transactions.export', array_merge(request()->query(), ['format' => 'csv'])) }}" class="btn btn-success">⬇️ CSV</a>
+        <a href="{{ route('admin.transactions.export', array_merge(request()->query(), ['format' => 'pdf'])) }}" class="btn btn-danger">⬇️ PDF</a>
+    </div>
 </div>
 
 <table>

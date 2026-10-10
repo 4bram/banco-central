@@ -35,4 +35,7 @@ Route::middleware('admin.auth')->prefix('admin')->name('admin.')->group(function
     Route::get('/reports', [ReportWebController::class, 'index'])->name('reports.index');
 
     Route::get('/cash-movements', [CashMovementWebController::class, 'index'])->name('cash.index');
+
+    Route::get('/transactions/export', [TransactionWebController::class, 'export'])->name('transactions.export');
+    Route::get('/cash-movements/export', [CashMovementWebController::class, 'export'])->name('cash.export');
 });
