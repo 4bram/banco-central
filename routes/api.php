@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\NodeController;
 use App\Http\Controllers\Api\NodeController as ApiNodeController;
@@ -25,6 +26,10 @@ Route::prefix('admin')->group(function () {
 // ─── API para nodos autenticados ──────────────────────
 Route::middleware('api.key')->group(function () {
     Route::get('/nodes/me', [ApiNodeController::class, 'me']);
+    Route::get('/nodes/me/transactions', [HistoryController::class, 'nodeTransactions']);
+    Route::get('/nodes/me/reports', [HistoryController::class, 'nodeReport']);
+    Route::get('/accounts/search', [HistoryController::class, 'searchAccounts']);
+    Route::get('/accounts/{accountNumber}/transactions', [HistoryController::class, 'accountTransactions']);
     Route::get('/balance/{accountNumber}', [BalanceController::class, 'show']);
 });
 
