@@ -218,6 +218,7 @@
     <nav>
         <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">📊 Dashboard</a>
         <a href="{{ route('admin.nodes.index') }}" class="{{ request()->routeIs('admin.nodes.*') ? 'active' : '' }}">🏢 Nodos</a>
+        <a href="{{ route('admin.cash.index') }}" class="{{ request()->routeIs('admin.cash.*') ? 'active' : '' }}">💵 Movimientos de efectivo</a>
         <a href="{{ route('admin.accounts.index') }}" class="{{ request()->routeIs('admin.accounts.*') ? 'active' : '' }}">💳 Cuentas</a>
         <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">💸 Transacciones</a>
         <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">📈 Reportes</a>

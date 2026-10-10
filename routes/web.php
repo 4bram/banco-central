@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\NodeWebController;
 use App\Http\Controllers\Admin\ReportWebController;
 use App\Http\Controllers\Admin\TransactionWebController;
+use App\Http\Controllers\Admin\CashMovementWebController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('admin.dashboard'));
@@ -32,4 +33,6 @@ Route::middleware('admin.auth')->prefix('admin')->name('admin.')->group(function
     Route::get('/transactions', [TransactionWebController::class, 'index'])->name('transactions.index');
 
     Route::get('/reports', [ReportWebController::class, 'index'])->name('reports.index');
+
+    Route::get('/cash-movements', [CashMovementWebController::class, 'index'])->name('cash.index');
 });

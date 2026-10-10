@@ -18,16 +18,10 @@ class CashController extends Controller
         ]);
 
         try {
-            $result = $this->cash->adjust($nodeId, $data['type'], $data['delta']);
+            $this->cash->adjust($nodeId, $data['type'], $data['delta']);
+            return back()->with('success', 'Efectivo ajustado correctamente');
         } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
+            return back()->with('error', 'Error: ' . $e->getMessage());
         }
-
-        return response()->json([
-            'message'       => 'Efectivo ajustado',
-            'movement_id'   => $result->movement_id,
-            'previous_cash' => $result->previous_cash,
-            'new_cash'      => $result->new_cash,
-        ]);
     }
 }
