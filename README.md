@@ -150,7 +150,7 @@ Los nodos se comunican vía API REST autenticada con API Keys emitidas por el Ba
 ## Endpoints del Banco Central
 
 URL base: `https://banco-central.onrender.com`
-URL base api: `https://banco-central.onrender.com/api`
+URL base api: `https://banco-central.onrender.com/api/[Endpoint]`
 
 ### Públicos
 
