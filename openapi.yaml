@@ -1,28 +1,34 @@
 openapi: 3.0.3
 info:
   title: Banco Central API
-  version: 1.0.0
-  description: >
-    API del banco central. Administra nodos (sucursales y cajeros), su efectivo,
-    cuentas, saldos y transacciones. Los nodos se autentican con una API key;
-    algunas rutas son exclusivas de sucursales (branch) y otras de cajeros (atm).
+  version: 1.1.0
+  description: API documentada a partir de routes/api.php, routes/web.php y controladores del ZIP facilitado.
+    Contratos de respuesta según el código, pendientes de prueba HTTP en el despliegue. Las rutas API administrativas
+    incluidas actualmente NO tienen middleware de autenticación; deben protegerse antes de exponerlas públicamente.
 servers:
-  - url: http://localhost:8000
-    description: Banco central local (ajusta host y puerto)
-
+- url: http://localhost:8001
+  description: Laravel local (puerto configurable)
+- url: http://localhost:8000
+  description: Laravel local alternativo
 tags:
-  - name: Health
-  - name: Nodo
-    description: Datos del nodo autenticado
-  - name: Admin
-    description: Panel del banco central
-  - name: Cuentas
-  - name: Transacciones
-
+- name: Health
+- name: Nodo
+  description: Datos del nodo autenticado
+- name: Admin
+  description: Panel del banco central
+- name: Cuentas
+- name: Transacciones
+- name: Historiales
+  description: Búsqueda e historiales por nodo/cuenta
+- name: Reportes
+  description: Resumen de operaciones del nodo
+- name: Panel web
+  description: Endpoints web de exportación, requieren sesión de administrador
 paths:
   /api/health:
     get:
-      tags: [Health]
+      tags:
+      - Health
       summary: Estado del servicio
       responses:
         '200':
@@ -32,99 +38,133 @@ paths:
               schema:
                 type: object
                 properties:
-                  status: { type: string, example: ok }
-                  node: { type: string, example: banco-central }
-                  time: { type: string, format: date-time }
-
+                  status:
+                    type: string
+                    example: ok
+                  node:
+                    type: string
+                    example: banco-central
+                  time:
+                    type: string
+                    format: date-time
   /api/nodes/me:
     get:
-      tags: [Nodo]
+      tags:
+      - Nodo
       summary: Consultar los datos del nodo autenticado (cualquier tipo de nodo)
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       responses:
         '200':
           description: Datos del nodo dueño de la API Key
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Node' }
+              schema:
+                $ref: '#/components/schemas/Node'
         '401':
           description: API Key requerida o inválida
         '403':
           description: Nodo inactivo
-
   /api/admin/nodes:
     get:
-      tags: [Admin]
+      tags:
+      - Admin
       summary: Listar los nodos registrados
       responses:
         '200':
-          description: Lista de nodos
+          description: Respuesta exitosa
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: '#/components/schemas/Node' }
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+      description: 'ADVERTENCIA: ruta API sin middleware administrativo en routes/api.php del código revisado.'
     post:
-      tags: [Admin]
+      tags:
+      - Admin
       summary: Registrar un nodo (sucursal o cajero)
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/NodeInput' }
+            schema:
+              $ref: '#/components/schemas/NodeInput'
       responses:
         '201':
-          description: Nodo creado
+          description: Respuesta exitosa
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Node' }
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  node:
+                    type: object
+                    additionalProperties: true
+                  api_key:
+                    type: string
+                    writeOnly: true
+                    description: Se muestra sólo durante la creación
         '422':
           description: Datos inválidos
-
+      description: 'ADVERTENCIA: ruta API sin middleware administrativo en routes/api.php del código revisado.'
   /api/admin/nodes/{nodeId}/cash:
     post:
-      tags: [Admin]
+      tags:
+      - Admin
       summary: Ajustar el efectivo disponible de un nodo
       parameters:
-        - name: nodeId
-          in: path
-          required: true
-          schema: { type: string }
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [amount]
+              required:
+              - type
+              - delta
               properties:
-                amount:
+                type:
+                  type: string
+                  enum:
+                  - allocation
+                  - replenishment
+                  - adjustment
+                delta:
                   type: number
-                  example: 5000
-                  description: Monto a ajustar (positivo suma, negativo resta)
+                  description: Cambio relativo de efectivo, distinto de cero
       responses:
-        '200':
-          description: Efectivo actualizado
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Node' }
-        '404':
-          description: Nodo no encontrado
+        '302':
+          description: Redirige al origen tras asignación de efectivo o error; respuesta web con flash
         '422':
-          description: Monto inválido
-
+          description: Validación fallida
+      description: 'ADVERTENCIA: ruta API sin middleware administrativo; el controlador devuelve REDIRECCIÓN
+        web con mensaje flash, no JSON.'
   /api/balance/{accountNumber}:
     get:
-      tags: [Cuentas]
+      tags:
+      - Cuentas
       summary: Consultar el saldo de una cuenta
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       parameters:
-        - name: accountNumber
-          in: path
-          required: true
-          schema: { type: string, example: '0012345678' }
+      - name: accountNumber
+        in: path
+        required: true
+        schema:
+          type: string
+          example: 0012345678
       responses:
         '200':
           description: Saldo de la cuenta
@@ -133,115 +173,447 @@ paths:
               schema:
                 type: object
                 properties:
-                  account_number: { type: string }
-                  balance: { type: number, example: 1500.50 }
+                  account_number:
+                    type: string
+                  balance:
+                    type: number
+                    example: 1500.5
         '401':
           description: API Key requerida o inválida
         '404':
           description: Cuenta no encontrada
-
   /api/accounts:
     post:
-      tags: [Cuentas]
+      tags:
+      - Cuentas
       summary: Crear una cuenta (solo sucursales)
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AccountInput' }
+            schema:
+              $ref: '#/components/schemas/AccountInput'
       responses:
         '201':
           description: Cuenta creada
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Account' }
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cuenta creada
+                  account:
+                    $ref: '#/components/schemas/Account'
         '401':
           description: API Key requerida o inválida
         '403':
           description: Nodo inactivo u operación no permitida para su tipo (se requiere branch)
         '422':
           description: Datos inválidos
-
   /api/transfer:
     post:
-      tags: [Transacciones]
+      tags:
+      - Transacciones
       summary: Transferir dinero entre cuentas (solo sucursales)
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [from_account, to_account, amount]
+              required:
+              - from_account_number
+              - to_account_number
+              - amount
               properties:
-                from_account: { type: string, example: '0012345678' }
-                to_account: { type: string, example: '0087654321' }
-                amount: { type: number, example: 250 }
+                from_account_number:
+                  type: string
+                to_account_number:
+                  type: string
+                amount:
+                  type: number
+                  minimum: 0.01
       responses:
         '200':
           description: Transferencia realizada
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TransactionResult' }
+              schema:
+                $ref: '#/components/schemas/TransactionResult'
         '401':
           description: API Key requerida o inválida
         '403':
           description: Nodo inactivo u operación no permitida para su tipo (se requiere branch)
         '422':
           description: Fondos insuficientes o datos inválidos
-
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Reutilizar el mismo identificador en reintentos de la misma operación; si se omite el
+          servicio genera uno.
   /api/withdraw:
     post:
-      tags: [Transacciones]
+      tags:
+      - Transacciones
       summary: Retirar efectivo (solo cajeros)
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CashOperation' }
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/CashOperation'
+              - type: object
+                required:
+                - pin
       responses:
         '200':
           description: Retiro realizado
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TransactionResult' }
+              schema:
+                $ref: '#/components/schemas/TransactionResult'
         '401':
           description: API Key requerida o inválida
         '403':
           description: Nodo inactivo u operación no permitida para su tipo (se requiere atm)
         '422':
           description: Fondos insuficientes, efectivo insuficiente en el cajero o datos inválidos
-
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Reutilizar el mismo identificador en reintentos de la misma operación; si se omite el
+          servicio genera uno.
   /api/deposit:
     post:
-      tags: [Transacciones]
+      tags:
+      - Transacciones
       summary: Depositar efectivo (solo cajeros)
       security:
-        - ApiKeyAuth: []
+      - ApiKeyAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CashOperation' }
+            schema:
+              $ref: '#/components/schemas/CashOperation'
       responses:
         '200':
           description: Depósito realizado
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TransactionResult' }
+              schema:
+                $ref: '#/components/schemas/TransactionResult'
         '401':
           description: API Key requerida o inválida
         '403':
           description: Nodo inactivo u operación no permitida para su tipo (se requiere atm)
         '422':
           description: Datos inválidos
-
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Reutilizar el mismo identificador en reintentos de la misma operación; si se omite el
+          servicio genera uno.
+  /api/nodes/me/transactions:
+    get:
+      tags:
+      - Historiales
+      summary: Historial local del nodo autenticado
+      security: &id001
+      - ApiKeyAuth: []
+      parameters:
+      - &id002
+        name: type
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - deposit
+          - withdrawal
+          - transfer
+      - &id003
+        name: from
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Fecha/hora mínima para created_at, comparación >= literal
+      - &id004
+        name: to
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Fecha/hora máxima para created_at, comparación <= literal; una fecha sin hora puede excluir
+          el resto del día
+      - &id005
+        name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 100
+        description: El controlador usa limit sin validación explícita de rango.
+      responses:
+        '200':
+          description: Respuesta exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  node:
+                    $ref: '#/components/schemas/NodeSummary'
+                  count:
+                    type: integer
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionHistoryItem'
+        '401':
+          description: API Key inválida o ausente
+        '403':
+          description: Nodo no autorizado
+  /api/accounts/{accountNumber}/transactions:
+    get:
+      tags:
+      - Historiales
+      summary: Historial de una cuenta bancaria (cualquier nodo con API Key válida en la versión actual)
+      description: Actualmente el middleware api.key no restringe el tipo de nodo para esta consulta.
+      security: *id001
+      parameters:
+      - name: accountNumber
+        in: path
+        required: true
+        schema:
+          type: string
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      responses:
+        '200':
+          description: Respuesta exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account:
+                    type: object
+                    properties:
+                      account_number:
+                        type: string
+                      holder_name:
+                        type: string
+                      balance:
+                        type: string
+                        example: '700.00'
+                      status:
+                        type: string
+                  count:
+                    type: integer
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionHistoryItem'
+        '401':
+          description: API Key inválida
+        '404':
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/accounts/search:
+    get:
+      tags:
+      - Cuentas
+      summary: Buscar cuentas por número o titular
+      security: *id001
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+        description: Se buscan coincidencias parciales con ilike; máximo 50 resultados.
+      responses:
+        '200':
+          description: Respuesta exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  accounts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        account_number:
+                          type: string
+                        holder_name:
+                          type: string
+                        balance:
+                          type: string
+                        status:
+                          type: string
+        '422':
+          description: q ausente o menor de dos caracteres
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/nodes/me/reports:
+    get:
+      tags:
+      - Reportes
+      summary: Reporte administrativo de operaciones del nodo autenticado
+      security: *id001
+      parameters:
+      - *id002
+      - *id003
+      - *id004
+      responses:
+        '200':
+          description: Respuesta exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  node:
+                    $ref: '#/components/schemas/NodeSummary'
+                  period:
+                    type: object
+                    properties:
+                      from:
+                        type: string
+                        nullable: true
+                      to:
+                        type: string
+                        nullable: true
+                  summary:
+                    type: object
+                    properties:
+                      total_transactions:
+                        type: integer
+                      total_amount:
+                        type: string
+                        example: '1500.00'
+                      by_type:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReportTypeSummary'
+        '401':
+          description: API Key inválida
+  /admin/transactions/export:
+    get:
+      tags:
+      - Panel web
+      summary: Exportar transacciones a CSV o PDF
+      description: Ruta web protegida con admin.auth, no usa API Key. Requiere sesión administrativa Laravel
+        y cookies del navegador.
+      parameters:
+      - name: format
+        in: query
+        schema:
+          type: string
+          enum:
+          - csv
+          - pdf
+          default: csv
+      - name: node_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: type
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Archivo CSV o PDF descargable
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '302':
+          description: Puede redirigir a login cuando la sesión no es válida
+  /admin/cash-movements/export:
+    get:
+      tags:
+      - Panel web
+      summary: Exportar movimientos de efectivo a CSV o PDF
+      description: Ruta web protegida con admin.auth, no usa API Key. Requiere sesión administrativa Laravel
+        y cookies del navegador.
+      parameters:
+      - name: format
+        in: query
+        schema:
+          type: string
+          enum:
+          - csv
+          - pdf
+          default: csv
+      - name: node_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: type
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Archivo CSV o PDF descargable
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '302':
+          description: Puede redirigir a login cuando la sesión no es válida
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -252,44 +624,183 @@ components:
   schemas:
     NodeInput:
       type: object
-      required: [name, type]
+      required:
+      - name
+      - type
       properties:
-        name: { type: string, example: sucursal-centro }
+        name:
+          type: string
+          example: sucursal-centro
         type:
           type: string
-          enum: [branch, atm]
+          enum:
+          - branch
+          - atm
+        location:
+          type: string
+          nullable: true
+        cash_available:
+          type: number
+          minimum: 0
+        responsible:
+          type: object
+          properties:
+            full_name:
+              type: string
+            email:
+              type: string
+              format: email
     Node:
       type: object
       properties:
-        id: { type: string }
-        name: { type: string, example: sucursal-centro }
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        location:
+          type: string
+          example: Sucursal Centro
         type:
           type: string
-          enum: [branch, atm]
-        status: { type: string, enum: [active, inactive], example: active }
-        cash: { type: number, example: 10000 }
-        api_key: { type: string }
+          enum:
+          - branch
+          - atm
+        cash:
+          type: number
+          format: double
+          example: 20000.0
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
     AccountInput:
       type: object
-      required: [holder_name]
+      required:
+      - account_number
+      - holder_name
+      - pin
       properties:
-        holder_name: { type: string, example: Abraham }
-        initial_balance: { type: number, example: 0 }
+        account_number:
+          type: string
+          minLength: 8
+          maxLength: 20
+        holder_name:
+          type: string
+          maxLength: 150
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 8
+          writeOnly: true
+        initial_balance:
+          type: number
+          minimum: 0
     Account:
       type: object
-      properties:
-        account_number: { type: string, example: '0012345678' }
-        holder_name: { type: string }
-        balance: { type: number }
+      additionalProperties: true
+      description: Registro Eloquent de cuenta retornado dentro de account; los campos exactos serializados
+        dependen del modelo.
     CashOperation:
       type: object
-      required: [account_number, amount]
+      required:
+      - account_number
+      - amount
       properties:
-        account_number: { type: string, example: '0012345678' }
-        amount: { type: number, example: 500 }
+        account_number:
+          type: string
+        amount:
+          type: number
+          minimum: 0.01
+        pin:
+          type: string
+          writeOnly: true
+          description: Requerido para /api/withdraw; no requerido para /api/deposit
     TransactionResult:
       type: object
       properties:
-        message: { type: string, example: Operación exitosa }
-        transaction_id: { type: string }
-        balance: { type: number, example: 1000 }
+        message:
+          type: string
+        transaction_id:
+          type: string
+          format: uuid
+        balance_after:
+          type: string
+          nullable: true
+        cash_after:
+          type: string
+          nullable: true
+        replayed:
+          type: boolean
+    NodeSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - branch
+          - atm
+    TransactionHistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - deposit
+          - withdrawal
+          - transfer
+        amount:
+          type: string
+          example: '300.00'
+        node:
+          allOf:
+          - $ref: '#/components/schemas/NodeSummary'
+          nullable: true
+          description: null en historial local; datos del nodo en historial por cuenta
+        origin_account:
+          type: string
+          nullable: true
+          example: '10000001'
+        destination_account:
+          type: string
+          nullable: true
+          example: '10000002'
+        created_at:
+          type: string
+          format: date-time
+    ReportTypeSummary:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
+        amount:
+          type: string
+          example: '1000.00'
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    ValidationError:
+      type: object
+      description: Respuesta de validación estándar de Laravel (puede variar según encabezado Accept).
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
