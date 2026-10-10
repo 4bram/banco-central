@@ -30,8 +30,6 @@ Los nodos se comunican vía API REST autenticada con API Keys emitidas por el Ba
 | API (URL base) | https://banco-central.onrender.com/api |
 | Health check | https://banco-central.onrender.com/api/health |
 | Panel Admin | https://banco-central.onrender.com/admin/login |
-| Documentación (Swagger UI) | https://banco-central.onrender.com/docs |
-| Especificación OpenAPI (YAML) | https://banco-central.onrender.com/openapi.yaml |
 
 > **Nota:** el plan Free de Render duerme el servicio tras un rato sin tráfico; la primera petición puede tardar unos segundos en responder.
 
