@@ -38,6 +38,9 @@ class TransactionController extends Controller
 
         $node = $request->_api_node;
 
+        // Leer el header de idempotencia
+        $idempotencyKey = $request->header('Idempotency-Key');
+
         try {
             $result = $this->transactions->process(
                 nodeId: $node->id,
@@ -45,6 +48,7 @@ class TransactionController extends Controller
                 originAccountId: $account->id,
                 destinationAccountId: null,
                 amount: $data['amount'],
+                idempotencyKey: $idempotencyKey,
             );
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -77,6 +81,9 @@ class TransactionController extends Controller
 
         $node = $request->_api_node;
 
+        // Leer el header de idempotencia
+        $idempotencyKey = $request->header('Idempotency-Key');
+
         try {
             $result = $this->transactions->process(
                 nodeId: $node->id,
@@ -84,6 +91,7 @@ class TransactionController extends Controller
                 originAccountId: null,
                 destinationAccountId: $account->id,
                 amount: $data['amount'],
+                idempotencyKey: $idempotencyKey,
             );
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -94,6 +102,7 @@ class TransactionController extends Controller
             'transaction_id' => $result->transaction_id,
             'balance_after'  => $result->balance_after,
             'cash_after'     => $result->cash_after,
+            'replayed'       => $result->replayed,
         ]);
     }
 
@@ -118,6 +127,9 @@ class TransactionController extends Controller
 
         $node = $request->_api_node;
 
+        // Leer el header de idempotencia
+        $idempotencyKey = $request->header('Idempotency-Key');
+
         try {
             $result = $this->transactions->process(
                 nodeId: $node->id,
@@ -125,6 +137,7 @@ class TransactionController extends Controller
                 originAccountId: $origin->id,
                 destinationAccountId: $destination->id,
                 amount: $data['amount'],
+                idempotencyKey: $idempotencyKey,
             );
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -133,6 +146,7 @@ class TransactionController extends Controller
         return response()->json([
             'message'        => 'Transferencia exitosa',
             'transaction_id' => $result->transaction_id,
+            'replayed'       => $result->replayed,
         ]);
     }
 }
