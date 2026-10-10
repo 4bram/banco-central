@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: Banco Central API
+  version: 1.0.0
+  description: >
+    API del banco central. Administra nodos (sucursales y cajeros), su efectivo,
+    cuentas, saldos y transacciones. Los nodos se autentican con una API key;
+    algunas rutas son exclusivas de sucursales (branch) y otras de cajeros (atm).
+servers:
+  - url: http://localhost:8000
+    description: Banco central local (ajusta host y puerto)
+
+tags:
+  - name: Health
+  - name: Nodo
+    description: Datos del nodo autenticado
+  - name: Admin
+    description: Panel del banco central
+  - name: Cuentas
+  - name: Transacciones
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Estado del servicio
+      responses:
+        '200':
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  node: { type: string, example: banco-central }
+                  time: { type: string, format: date-time }
+
+  /api/nodes/me:
+    get:
+      tags: [Nodo]
+      summary: Consultar los datos del nodo autenticado (cualquier tipo de nodo)
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Datos del nodo dueño de la API Key
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Node' }
+        '401':
+          description: API Key requerida o inválida
+        '403':
+          description: Nodo inactivo
+
+  /api/admin/nodes:
+    get:
+      tags: [Admin]
+      summary: Listar los nodos registrados
+      responses:
+        '200':
+          description: Lista de nodos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Node' }
+    post:
+      tags: [Admin]
+      summary: Registrar un nodo (sucursal o cajero)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NodeInput' }
+      responses:
+        '201':
+          description: Nodo creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Node' }
+        '422':
+          description: Datos inválidos
+
+  /api/admin/nodes/{nodeId}/cash:
+    post:
+      tags: [Admin]
+      summary: Ajustar el efectivo disponible de un nodo
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  example: 5000
+                  description: Monto a ajustar (positivo suma, negativo resta)
+      responses:
+        '200':
+          description: Efectivo actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Node' }
+        '404':
+          description: Nodo no encontrado
+        '422':
+          description: Monto inválido
+
+  /api/balance/{accountNumber}:
+    get:
+      tags: [Cuentas]
+      summary: Consultar el saldo de una cuenta
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: accountNumber
+          in: path
+          required: true
+          schema: { type: string, example: '0012345678' }
+      responses:
+        '200':
+          description: Saldo de la cuenta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_number: { type: string }
+                  balance: { type: number, example: 1500.50 }
+        '401':
+          description: API Key requerida o inválida
+        '404':
+          description: Cuenta no encontrada
+
+  /api/accounts:
+    post:
+      tags: [Cuentas]
+      summary: Crear una cuenta (solo sucursales)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AccountInput' }
+      responses:
+        '201':
+          description: Cuenta creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        '401':
+          description: API Key requerida o inválida
+        '403':
+          description: Nodo inactivo u operación no permitida para su tipo (se requiere branch)
+        '422':
+          description: Datos inválidos
+
+  /api/transfer:
+    post:
+      tags: [Transacciones]
+      summary: Transferir dinero entre cuentas (solo sucursales)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from_account, to_account, amount]
+              properties:
+                from_account: { type: string, example: '0012345678' }
+                to_account: { type: string, example: '0087654321' }
+                amount: { type: number, example: 250 }
+      responses:
+        '200':
+          description: Transferencia realizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionResult' }
+        '401':
+          description: API Key requerida o inválida
+        '403':
+          description: Nodo inactivo u operación no permitida para su tipo (se requiere branch)
+        '422':
+          description: Fondos insuficientes o datos inválidos
+
+  /api/withdraw:
+    post:
+      tags: [Transacciones]
+      summary: Retirar efectivo (solo cajeros)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CashOperation' }
+      responses:
+        '200':
+          description: Retiro realizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionResult' }
+        '401':
+          description: API Key requerida o inválida
+        '403':
+          description: Nodo inactivo u operación no permitida para su tipo (se requiere atm)
+        '422':
+          description: Fondos insuficientes, efectivo insuficiente en el cajero o datos inválidos
+
+  /api/deposit:
+    post:
+      tags: [Transacciones]
+      summary: Depositar efectivo (solo cajeros)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CashOperation' }
+      responses:
+        '200':
+          description: Depósito realizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionResult' }
+        '401':
+          description: API Key requerida o inválida
+        '403':
+          description: Nodo inactivo u operación no permitida para su tipo (se requiere atm)
+        '422':
+          description: Datos inválidos
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key del nodo, se guarda hasheada (SHA256) y solo se acepta si el nodo está activo
+  schemas:
+    NodeInput:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string, example: sucursal-centro }
+        type:
+          type: string
+          enum: [branch, atm]
+    Node:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: sucursal-centro }
+        type:
+          type: string
+          enum: [branch, atm]
+        status: { type: string, enum: [active, inactive], example: active }
+        cash: { type: number, example: 10000 }
+        api_key: { type: string }
+    AccountInput:
+      type: object
+      required: [holder_name]
+      properties:
+        holder_name: { type: string, example: Abraham }
+        initial_balance: { type: number, example: 0 }
+    Account:
+      type: object
+      properties:
+        account_number: { type: string, example: '0012345678' }
+        holder_name: { type: string }
+        balance: { type: number }
+    CashOperation:
+      type: object
+      required: [account_number, amount]
+      properties:
+        account_number: { type: string, example: '0012345678' }
+        amount: { type: number, example: 500 }
+    TransactionResult:
+      type: object
+      properties:
+        message: { type: string, example: Operación exitosa }
+        transaction_id: { type: string }
+        balance: { type: number, example: 1000 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\NodeController;
+use App\Http\Controllers\Api\NodeController as ApiNodeController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\BalanceController;
 use App\Http\Controllers\Api\TransactionController;
@@ -23,6 +24,7 @@ Route::prefix('admin')->group(function () {
 
 // ─── API para nodos autenticados ──────────────────────
 Route::middleware('api.key')->group(function () {
+    Route::get('/nodes/me', [ApiNodeController::class, 'me']);
     Route::get('/balance/{accountNumber}', [BalanceController::class, 'show']);
 });
 
