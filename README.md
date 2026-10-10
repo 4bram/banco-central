@@ -18,7 +18,9 @@ Sistema bancario distribuido compuesto por 3 nodos independientes:
 - **Nodo ATM**: Express + Vercel
 
 Los nodos se comunican vía API REST autenticada con API Keys emitidas por el Banco Central. Todos comparten la misma base de datos centralizada en Supabase (PostgreSQL).
-
+## Credencial de acceso:
+20031313@itcelaya.edu.mx
+35a00bfd
 ---
 
 ## Link del despliegue
