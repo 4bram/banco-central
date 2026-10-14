@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
     <div class="brand">
-        🏦 Banco Central
+        🏦 Banco NO Central
         <small>Panel Administrativo</small>
     </div>
     <nav>
